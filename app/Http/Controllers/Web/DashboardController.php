@@ -26,7 +26,9 @@ class DashboardController extends Controller
 
     public function index()
     {
-        $wallet = Auth::user()->wallet;
+        $wallet = Auth::user()->wallet()->firstOrCreate([]);
+        $walletDeposit = Auth::user()->walletDeposit()->firstOrCreate([], ['amount' => 0]);
+        $fiatBalance = $walletDeposit ? $walletDeposit->amount : 0;
         $metalPrices = $this->goldPriceService->getAllPrices();
         
         // Fetch last 7 historical prices for each metal
@@ -55,7 +57,12 @@ class DashboardController extends Controller
         $storageLimitKg = (float) \App\Models\SystemSetting::getVal('storage_limit_kg', '5.0');
         $extraStoragePrice = (float) \App\Models\SystemSetting::getVal('extra_storage_price_per_kg', '15.00');
 
-        // Calculate user storage weight and fees
+        // Fetch admin inventory if current user is admin
+        $adminInventory = null;
+        if (Auth::user()->role === 'admin') {
+            $adminUser = \App\Models\User::where('role', 'admin')->first();
+            $adminInventory = $adminUser ? $adminUser->wallet : null;
+        }
         $totalWeightG = $wallet->gold_balance + $wallet->silver_balance + $wallet->platinum_balance + $wallet->palladium_balance;
         $totalWeightKg = $totalWeightG / 1000;
         $extraWeightKg = max(0, $totalWeightKg - $storageLimitKg);
@@ -65,6 +72,7 @@ class DashboardController extends Controller
 
         return view('dashboard.index', compact(
             'wallet',
+            'fiatBalance',
             'metalPrices',
             'chartData',
             'shopLocation',
@@ -84,9 +92,10 @@ class DashboardController extends Controller
         $this->walletService->depositFiat(Auth::id(), $request->amount);
         
         $wallet = Auth::user()->wallet->fresh();
+        $walletDeposit = Auth::user()->walletDeposit->fresh();
         return response()->json([
             'success' => true,
-            'fiat_balance' => $wallet->balance,
+            'fiat_balance' => $walletDeposit ? $walletDeposit->amount : 0,
             'gold_balance' => $wallet->gold_balance,
             'silver_balance' => $wallet->silver_balance,
             'platinum_balance' => $wallet->platinum_balance,
@@ -105,10 +114,11 @@ class DashboardController extends Controller
         $this->tradingService->buyMetal(Auth::id(), $metal, $request->quantity);
         
         $wallet = Auth::user()->wallet->fresh();
+        $walletDeposit = Auth::user()->walletDeposit->fresh();
         return response()->json([
             'success' => true,
             'message' => 'Successfully bought ' . $request->quantity . 'g of ' . ucfirst($metal) . '!',
-            'fiat_balance' => $wallet->balance,
+            'fiat_balance' => $walletDeposit ? $walletDeposit->amount : 0,
             'gold_balance' => $wallet->gold_balance,
             'silver_balance' => $wallet->silver_balance,
             'platinum_balance' => $wallet->platinum_balance,
@@ -127,10 +137,11 @@ class DashboardController extends Controller
         $this->tradingService->sellMetal(Auth::id(), $metal, $request->quantity);
         
         $wallet = Auth::user()->wallet->fresh();
+        $walletDeposit = Auth::user()->walletDeposit->fresh();
         return response()->json([
             'success' => true,
             'message' => 'Successfully sold ' . $request->quantity . 'g of ' . ucfirst($metal) . '!',
-            'fiat_balance' => $wallet->balance,
+            'fiat_balance' => $walletDeposit ? $walletDeposit->amount : 0,
             'gold_balance' => $wallet->gold_balance,
             'silver_balance' => $wallet->silver_balance,
             'platinum_balance' => $wallet->platinum_balance,
@@ -207,9 +218,10 @@ class DashboardController extends Controller
         }
         
         $wallet = Auth::user()->wallet->fresh();
+        $walletDeposit = Auth::user()->walletDeposit->fresh();
         return response()->json([
             'success' => true,
-            'fiat_balance' => $wallet->balance,
+            'fiat_balance' => $walletDeposit ? $walletDeposit->amount : 0,
             'gold_balance' => $wallet->gold_balance,
             'silver_balance' => $wallet->silver_balance,
             'platinum_balance' => $wallet->platinum_balance,
@@ -219,7 +231,7 @@ class DashboardController extends Controller
 
     public function updateAdminSettings(Request $request)
     {
-        if (Auth::user()->role !== 'admin' && !Auth::user()->hasRole('admin')) {
+        if (Auth::user()->role !== 'admin') {
             return response()->json(['success' => false, 'message' => 'Unauthorized admin action.'], 403);
         }
 

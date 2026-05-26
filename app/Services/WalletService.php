@@ -29,6 +29,10 @@ class WalletService
             $wallet->balance += $amount;
             $wallet->save();
 
+            $walletDeposit = \App\Models\WalletDeposit::firstOrNew(['user_id' => $userId]);
+            $walletDeposit->amount = ($walletDeposit->amount ?? 0) + $amount;
+            $walletDeposit->save();
+
             $this->transactionRepository->create([
                 'wallet_id' => $wallet->id,
                 'type' => TransactionType::DEPOSIT->value,
@@ -44,12 +48,18 @@ class WalletService
         DB::transaction(function () use ($userId, $amount, $description) {
             $wallet = $this->walletRepository->getWalletByUserIdForUpdate($userId);
             
-            if ($wallet->balance < $amount) {
+            $walletDeposit = \App\Models\WalletDeposit::firstOrNew(['user_id' => $userId]);
+            $fiatBalance = $walletDeposit->amount ?? 0;
+            
+            if ($fiatBalance < $amount) {
                 throw new InsufficientFundsException("Insufficient fiat balance.");
             }
 
             $wallet->balance -= $amount;
             $wallet->save();
+
+            $walletDeposit->amount -= $amount;
+            $walletDeposit->save();
 
             $this->transactionRepository->create([
                 'wallet_id' => $wallet->id,

@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\AdminMaterialController;
 use App\Services\GoldPriceService;
 use App\Http\Controllers\Web\AuthController;
 
@@ -34,6 +35,10 @@ Route::get('/debug-jazz', function() {
 Route::get('/wallet/jazzcash/payment', [\App\Http\Controllers\Api\WalletController::class, 'jazzcashPayment']);
 Route::post('/wallet/jazzcash/callback', [\App\Http\Controllers\Api\WalletController::class, 'jazzcashCallback']);
 
+Route::get('/wallet/stripe/payment', [\App\Http\Controllers\Api\WalletController::class, 'stripePayment'])->name('stripe.payment');
+Route::get('/wallet/stripe/success', [\App\Http\Controllers\Api\WalletController::class, 'stripeSuccess'])->name('stripe.success');
+Route::get('/wallet/stripe/cancel', [\App\Http\Controllers\Api\WalletController::class, 'stripeCancel'])->name('stripe.cancel');
+
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('auth')->name('dashboard');
 
 Route::middleware('auth')->group(function () {
@@ -44,7 +49,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/settings/toggle-status', [DashboardController::class, 'toggleStatus']);
     Route::post('/vault/pay-invoice', [DashboardController::class, 'payVaultInvoice']);
     Route::post('/admin/update-settings', [DashboardController::class, 'updateAdminSettings']);
-
+    // Admin Materials CRUD
+    Route::get('/admin/materials', [AdminMaterialController::class, 'index'])->middleware(['auth', 'admin'])->name('admin.materials.index');
+    // Admin Materials CRUD routes
+    Route::post('/admin/materials', [AdminMaterialController::class, 'store'])->middleware(['auth', 'admin'])->name('admin.materials.store');
+    Route::put('/admin/materials/{id}', [AdminMaterialController::class, 'update'])->middleware(['auth', 'admin'])->name('admin.materials.update');
+    Route::delete('/admin/materials/{id}', [AdminMaterialController::class, 'destroy'])->middleware(['auth', 'admin'])->name('admin.materials.destroy');
 
 
 

@@ -49,11 +49,16 @@
                 </a>
             </li>
             @if(auth()->user()->role === 'admin' || auth()->user()->hasRole('admin'))
-            <li>
-                <a href="#" onclick="showTab('admin')" class="sidebar-link" id="sidebar-admin">
-                    <i class="fa-solid fa-user-shield"></i> Admin Control
-                </a>
-            </li>
+                <li>
+                    <a href="#" onclick="showTab('admin-materials')" class="sidebar-link" id="sidebar-admin-materials">
+                        <i class="fa-solid fa-boxes-stacked"></i> Materials
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="showTab('admin')" class="sidebar-link" id="sidebar-admin">
+                        <i class="fa-solid fa-user-shield"></i> Admin Control
+                    </a>
+                </li>
             @endif
             <li style="margin-top: auto;">
                 <a href="/logout" class="sidebar-link sidebar-logout">
@@ -108,7 +113,7 @@
                         <i class="fa-solid fa-dollar-sign"></i> Available Wallet Balance
                     </div>
                     <div style="font-size: 48px; font-weight: 300; margin-bottom: 20px; color: var(--gold-light); display: flex; align-items: center; gap: 15px;">
-                        <span id="fiatBalance" data-balance="{{ $wallet->balance }}">••••••</span>
+                        <span id="fiatBalance" data-balance="{{ $fiatBalance }}">••••••</span>
                         <button id="toggleBalanceBtn" onclick="toggleBalanceVisibility()" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 24px; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: color 0.3s ease;">
                             <i class="fa-solid fa-eye-slash"></i>
                         </button>
@@ -549,7 +554,7 @@
         </div>
 
         <!-- Tab: Admin Control (Only visible to Admin) -->
-        @if(auth()->user()->role === 'admin' || auth()->user()->hasRole('admin'))
+        @if(auth()->user()->role === 'admin')
         <div id="tab-admin" class="tab-pane" style="display: none;">
             <header class="dashboard-header">
                 <div class="welcome-msg">
@@ -596,7 +601,108 @@
             </div>
         </div>
         @endif
-    </main>
+    
+            <div id="tab-admin-materials" class="tab-pane" style="display: none;">
+                <header class="dashboard-header">
+                    <div class="welcome-msg">
+                        <h1><i class="fa-solid fa-boxes-stacked" style="color: var(--gold-light);"></i> Materials Management</h1>
+                        <p>Manage your precious metals inventory — add, update, or remove stock across all supported metals.</p>
+                    </div>
+                </header>
+
+                @if(session('success'))
+                    <div style="background: rgba(74,124,89,0.15); color: #4A7C59; padding: 12px 20px; border-radius: 8px; margin-bottom: 20px; font-size: 14px;">
+                        <i class="fa-solid fa-circle-check"></i> {{ session('success') }}
+                    </div>
+                @endif
+
+                <!-- Materials Inventory Table -->
+                <div class="card" style="padding: 25px; margin-bottom: 30px;">
+                    <div class="card-title" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                        <span><i class="fa-solid fa-list-check" style="color: var(--gold-light);"></i> Current Inventory</span>
+                        <span style="font-size: 12px; background: rgba(74,124,89,0.15); color: #4A7C59; padding: 4px 10px; border-radius: 4px;">{{ \App\Models\AdminMaterial::count() }} Items</span>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary);">
+                                    <th style="padding: 12px 8px;">ID</th>
+                                    <th style="padding: 12px 8px;">Metal</th>
+                                    <th style="padding: 12px 8px;">Amount (g)</th>
+                                    <th style="padding: 12px 8px;">Buy Price ($/g)</th>
+                                    <th style="padding: 12px 8px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse(\App\Models\AdminMaterial::all() as $material)
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                        <td style="padding: 16px 8px; color: var(--text-muted);">#{{ $material->id }}</td>
+                                        <td style="padding: 16px 8px; font-weight: 500;">
+                                            @if($material->metal === 'gold')
+                                                <i class="fa-solid fa-coins" style="color: var(--gold-light); margin-right: 8px;"></i>
+                                            @elseif($material->metal === 'silver')
+                                                <i class="fa-solid fa-circle" style="color: var(--silver-color); margin-right: 8px;"></i>
+                                            @elseif($material->metal === 'platinum')
+                                                <i class="fa-solid fa-gem" style="color: var(--platinum-color); margin-right: 8px;"></i>
+                                            @else
+                                                <i class="fa-solid fa-shield-halved" style="color: var(--palladium-color); margin-right: 8px;"></i>
+                                            @endif
+                                            {{ ucfirst($material->metal) }}
+                                        </td>
+                                        <td style="padding: 16px 8px;">{{ number_format($material->amount, 4) }}</td>
+                                        <td style="padding: 16px 8px; color: var(--gold-light);">${{ number_format($material->buy_price, 4) }}</td>
+                                        <td style="padding: 16px 8px;">
+                                            <div style="display: flex; gap: 8px; align-items: center;">
+                                                <form action="{{ route('admin.materials.update', $material->id) }}" method="POST" style="display: flex; gap: 6px; align-items: center;">
+                                                    @csrf
+                                                    @method('PUT')
+                                                    <input type="number" name="amount" value="{{ $material->amount }}" step="0.0001" min="0" class="form-control" style="width: 100px; padding: 6px 10px; font-size: 13px;" required>
+                                                    <button type="submit" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">Update</button>
+                                                </form>
+                                                <form action="{{ route('admin.materials.destroy', $material->id) }}" method="POST" onsubmit="return confirm('Delete this material?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-outline" style="padding: 6px 12px; font-size: 12px; color: #ff4d4d; border-color: rgba(255,77,77,0.4);"><i class="fa-solid fa-trash"></i></button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" style="padding: 30px; text-align: center; color: var(--text-muted);">No materials in inventory yet.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Add New Material -->
+                <div class="card" style="padding: 25px;">
+                    <div class="card-title" style="margin-bottom: 20px;"><i class="fa-solid fa-plus-circle" style="color: var(--gold-light);"></i> Add New Material</div>
+                    <form action="{{ route('admin.materials.store') }}" method="POST">
+                        @csrf
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                            <div class="form-group">
+                                <label class="form-label" style="font-size: 13px; margin-bottom: 8px; display: block;">Metal Type</label>
+                                <select name="metal" class="form-control" style="padding-left: 10px;" required>
+                                    <option value="gold">Gold</option>
+                                    <option value="silver">Silver</option>
+                                    <option value="platinum">Platinum</option>
+                                    <option value="palladium">Palladium</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" style="font-size: 13px; margin-bottom: 8px; display: block;">Amount (grams)</label>
+                                <input type="number" name="amount" step="0.0001" min="0.0001" class="form-control" style="padding-left: 10px;" placeholder="e.g. 500" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fa-solid fa-circle-check"></i> Add Material to Inventory</button>
+                    </form>
+                </div>
+            </div>
+           
+            </main>
 
     <!-- Custom ChartJS Configuration -->
     <script>
@@ -1520,6 +1626,28 @@
                 });
             });
         }
+    }
+
+    function payWithStripe() {
+        const amount = $('#depositAmount').val();
+
+        if (!amount || amount <= 0) {
+            alert('Enter valid amount');
+            return;
+        }
+
+        const form = document.createElement('form');
+        form.method = 'GET';
+        form.action = '/wallet/stripe/payment';
+
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'amount';
+        input.value = amount;
+
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
     }
 
     function payWithJazzCash() {

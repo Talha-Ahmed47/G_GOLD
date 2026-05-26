@@ -31,6 +31,12 @@ class TradingService
             $currentPrice = $this->goldPriceService->getCurrentPrice($metal);
             $totalPrice = $quantity * $currentPrice;
 
+            // Ensure admin has sufficient metal inventory
+            $adminMaterial = \App\Models\AdminMaterial::where('metal', $metal)->first();
+            if (!$adminMaterial || $adminMaterial->amount < $quantity) {
+                throw new \Exception('Insufficient market liquidity for this metal.');
+            }
+
             // 1. Create PENDING Order
             $order = $this->orderRepository->create([
                 'user_id' => $userId,
@@ -42,9 +48,11 @@ class TradingService
                 'status' => OrderStatus::PENDING->value,
             ]);
 
-            // 2. Deduct Fiat, Add Metal. (WalletService handles locking and balances)
+            // Deduct fiat from user and add metal to user wallet
             $this->walletService->withdrawFiat($userId, $totalPrice, "Bought {$quantity}g of " . ucfirst($metal));
             $this->walletService->addMetal($userId, $metal, $quantity);
+            // Update admin inventory
+            \App\Models\AdminMaterial::where('metal', $metal)->decrement('amount', $quantity);
 
             // 3. Mark COMPLETED
             $this->orderRepository->update($order->id, [
@@ -78,9 +86,11 @@ class TradingService
                 'status' => OrderStatus::PENDING->value,
             ]);
 
-            // 2. Deduct Metal, Add Fiat. (WalletService handles locking and balances)
+            // Deduct metal from user and add fiat to user wallet
             $this->walletService->deductMetal($userId, $metal, $quantity);
             $this->walletService->depositFiat($userId, $totalPrice, "Sold {$quantity}g of " . ucfirst($metal));
+            // Update admin inventory
+            \App\Models\AdminMaterial::where('metal', $metal)->increment('amount', $quantity);
 
             // 3. Mark COMPLETED
             $this->orderRepository->update($order->id, [

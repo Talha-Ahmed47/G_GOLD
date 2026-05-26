@@ -53,10 +53,15 @@ class User extends Authenticatable
             'is_active' => 'boolean',
         ];
     }
-
+ 
     public function wallet()
     {
         return $this->hasOne(Wallet::class);
+    }
+
+    public function walletDeposit()
+    {
+        return $this->hasOne(WalletDeposit::class);
     }
 
     public function orders()

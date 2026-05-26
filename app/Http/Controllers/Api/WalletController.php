@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\WalletService;
+use Stripe\Stripe;
+use Stripe\Checkout\Session;
+use App\Models\WalletDeposit;
 
 class WalletController extends Controller
 {
@@ -207,15 +210,14 @@ class WalletController extends Controller
                 ]);
 
                 // Record deposit
-                WalletDeposit::create([
-                    'user_id' => $user->id,
-                    'amount' => $amount,
-                    'transaction_ref' => $request->pp_TxnRefNo,
-                    'response_code' => '000000',
-                    'response_message' => $request->pp_ResponseMessage,
-                    'status' => 'success',
-                    'raw_response' => $request->all(),
-                ]);
+                $walletDeposit = WalletDeposit::firstOrNew(['user_id' => $user->id]);
+                $walletDeposit->amount = ($walletDeposit->amount ?? 0) + $amount;
+                $walletDeposit->transaction_ref = $request->pp_TxnRefNo;
+                $walletDeposit->response_code = '000000';
+                $walletDeposit->response_message = $request->pp_ResponseMessage;
+                $walletDeposit->status = 'success';
+                $walletDeposit->raw_response = $request->all();
+                $walletDeposit->save();
 
                 \Log::info('Payment Success', [
                     'user_id' => $user->id,
@@ -281,4 +283,83 @@ class WalletController extends Controller
         return hash('sha256', $hashString);
     }
 //test tgus
+    public function stripePayment(Request $request)
+    {
+        try {
+            $amount = $request->amount;
+            if (!$amount || $amount <= 0) {
+                return redirect('/wallet')->with('error', 'Invalid amount');
+            }
+
+            Stripe::setApiKey(env('STRIPE_SECRET'));
+
+            $session = Session::create([
+                'payment_method_types' => ['card'],
+                'line_items' => [[
+                    'price_data' => [
+                        'currency' => 'usd',
+                        'unit_amount' => $amount * 100,
+                        'product_data' => [
+                            'name' => 'Wallet Deposit',
+                        ],
+                    ],
+                    'quantity' => 1,
+                ]],
+                'mode' => 'payment',
+                'success_url' => route('stripe.success') . '?session_id={CHECKOUT_SESSION_ID}',
+                'cancel_url' => route('stripe.cancel'),
+                'metadata' => [
+                    'user_id' => auth()->id()
+                ]
+            ]);
+
+            return redirect($session->url);
+        } catch (\Exception $e) {
+            // return redirect('/dashboard')->with('error', $e->getMessage());
+            dd($e->getMessage());
+        }
+    }
+
+    public function stripeSuccess(Request $request)
+    {
+        Stripe::setApiKey(env('STRIPE_SECRET'));
+        $sessionId = $request->get('session_id');
+
+        try {
+            $session = Session::retrieve($sessionId);
+            if (!$session || $session->payment_status !== 'paid') {
+                return redirect('/wallet')->with('error', 'Payment not completed.');
+            }
+
+            $user = \App\Models\User::find($session->metadata->user_id);
+            if (!$user) {
+                return redirect('/wallet')->with('error', 'User not found.');
+            }
+
+            $amount = $session->amount_total / 100;
+
+            $user->update([
+                'wallet_balance' => $user->wallet_balance + $amount
+            ]);
+
+            $walletDeposit = WalletDeposit::firstOrNew(['user_id' => $user->id]);
+            $walletDeposit->amount = ($walletDeposit->amount ?? 0) + $amount;
+            $walletDeposit->transaction_ref = $session->payment_intent;
+            $walletDeposit->response_code = 'success';
+            $walletDeposit->response_message = 'Stripe deposit';
+            $walletDeposit->status = 'success';
+            $walletDeposit->raw_response = $session->toArray();
+            $walletDeposit->save();
+
+            return redirect('/dashboard')->with('success', "\${$amount} added to your wallet via Stripe!");
+        } catch (\Exception $e) {
+            // return redirect('/wallet')->with('error', 'Error verifying Stripe payment.');
+            dd($e->getMessage());
+        }
+    }
+
+    public function stripeCancel()
+    {
+        return redirect('/wallet')->with('error', 'Stripe payment was cancelled.');
+    }
 }
