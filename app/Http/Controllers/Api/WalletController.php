@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+
+use App\Http\Controllers\Controller;
 use App\Services\WalletService;
+use App\Models\WalletDeposit;
 use Stripe\Stripe;
 use Stripe\Checkout\Session;
-use App\Models\WalletDeposit;
 
 class WalletController extends Controller
 {
@@ -45,45 +46,7 @@ class WalletController extends Controller
         return response()->json(['message' => 'Withdrawal successful']);
     }
 
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
-    }
+   
     public function jazzcashPayment(Request $request)
     {
         try {
@@ -91,70 +54,101 @@ class WalletController extends Controller
 
             $pp_MerchantID = env('JAZZCASH_MERCHANT_ID');
             $pp_Password = env('JAZZCASH_PASSWORD');
-            $IntegeritySalt = env('JAZZCASH_INTEGERITY_SALT');
+            $IntegeritySalt ="08z3t4096c";
 
             $pp_TxnRefNo = 'T' . time() . rand(1000, 9999);
+            $dateTime = now("Asia/Karachi")->format('YmdHis');
+            $expiryDateTime = now("Asia/Karachi")->addMinutes(30)->format('YmdHis');
+            // $data = [
+            //     "pp_Version" => "1.1",
+            //     "pp_TxnType" => "MWALLET",
+            //     "pp_Language" => "EN",
 
-            $data = [
-                "pp_Version" => "1.1",
-                "pp_TxnType" => "MWALLET",
-                "pp_Language" => "EN",
-                "pp_MerchantID" => $pp_MerchantID,
-                "pp_SubMerchantID" => "",
-                "pp_Password" => $pp_Password,
-                "pp_BankID" => "",
-                "pp_ProductID" => "",
-                "pp_TxnRefNo" => $pp_TxnRefNo,
-                "pp_Amount" => (int)$amount,
-                "pp_TxnCurrency" => "PKR",
-                "pp_TxnDateTime" => now()->format('YmdHis'),
-                "pp_BillReference" => "billRef",
-                "pp_Description" => "Wallet Deposit",
-                "pp_TxnExpiryDateTime" => now()->addHour()->format('YmdHis'),
-                "pp_ReturnURL" => url('/wallet/jazzcash/callback'),
-                // Remove ppmpf fields entirely
-            ];
+            //     "pp_MerchantID" => $pp_MerchantID,
+            //     "pp_Password" => $pp_Password,
+            //     "pp_TxnRefNo" => $pp_TxnRefNo,
+            //     "pp_Amount" => (int)$amount,
+            //     "pp_TxnCurrency" => "PKR",
+            //     "pp_TxnDateTime" => $dateTime,
+            //     "pp_TxnExpiryDateTime" => $expiryDateTime,
+            //     "pp_BillReference" => "billRef",
+            //     "pp_Description" => "Wallet Deposit",
+            //     // "pp_ReturnURL" => url('/wallet/jazzcash/callback'),
+            //     "pp_ReturnURL" => 'http://127.0.0.1:8000/wallet/jazzcash/callback',
+            //     // "pp_MobileNumber" => '92' . ltrim($request->user()->mobile_number, '0'),
+            //     // "pp_MobileNumber" => '92' . ltrim('3123456789', '0'),
+            
+            //     "ppmpf_1" => "03222852628", // Optional - can be used to pass additional info
+            // ];
+          $data = [
+            "pp_Version" => "1.1",
+            "pp_TxnType" => "MWALLET", 
+            "pp_Language" => "EN",
+
+            "pp_MerchantID" => $pp_MerchantID,
+            "pp_Password" => $pp_Password,
+            "pp_TxnRefNo" => $pp_TxnRefNo,
+            "pp_Amount" => (int)$amount,
+            "pp_TxnCurrency" => "PKR",
+            "pp_TxnDateTime" => $dateTime,
+            "pp_TxnExpiryDateTime" => $expiryDateTime,
+
+            "pp_BillReference" => "billRef",
+            "pp_Description" => "Wallet Deposit",
+            "pp_ReturnURL" => url('/wallet/jazzcash/callback'),
+            // "pp_MobileNumber" => "92323456789", // Use actual user mobile number here
+            "ppmpf_1" => "03321234567", // Optional - can be used to pass additional info
+        ];
 
             $data['pp_SecureHash'] = $this->generateSecureHash($data, $IntegeritySalt);
 
             // Store transaction reference in session/DB
-            session(['jazzcash_txn_ref' => $pp_TxnRefNo, 'jazzcash_user_id' => auth()->id()]);
+            session([
+                'jazzcash_txn_ref' => $pp_TxnRefNo,
+                'jazzcash_user_id' => auth()->id(),
+                'jazzcash_amount' => $amount,
+            ]);
 
             return view('jazzcash.redirect', compact('data'));
 
         } catch (\Exception $e) {
+            \Log::error('JazzCash Payment Error', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
             dd($e->getMessage());
+             // return redirect('/wallet')->with('error', 'Error initiating payment');
         }
     }
 
-    private function generateSecureHash($data, $salt)
+    private function generateSecureHash($data, $integritySalt)
     {
-        $hashString = $salt;
-        $hashString .= $data['pp_MerchantID'];
-        $hashString .= $data['pp_Password'];
-        $hashString .= $data['pp_TxnType'];
-        $hashString .= $data['pp_Language'];
-        $hashString .= $data['pp_MerchantID'];
-        $hashString .= $data['pp_SubMerchantID'];
-        $hashString .= $data['pp_BankID'];
-        $hashString .= $data['pp_ProductID'];
-        $hashString .= $data['pp_TxnRefNo'];
-        $hashString .= $data['pp_Amount'];
-        $hashString .= $data['pp_TxnCurrency'];
-        $hashString .= $data['pp_TxnDateTime'];
-        $hashString .= $data['pp_TxnExpiryDateTime'];
-        $hashString .= $data['pp_BillReference'];
-        $hashString .= $data['pp_Description'];
-        $hashString .= $data['pp_ReturnURL'];
-        // Add custom fields to hash
-        $hashString .= $data['ppmpf_1'];
-        $hashString .= $data['ppmpf_2'];
-        $hashString .= $data['ppmpf_3'];
-        $hashString .= $data['ppmpf_4'];
-        $hashString .= $data['ppmpf_5'];
+        $hashString = 
+            trim($integritySalt) . '&' .
+            trim($data['pp_Amount']) . '&' .
+            trim($data['pp_BillReference']) . '&' .
+            trim($data['pp_Description']) . '&' .
+            trim($data['pp_Language']) . '&' .
+            trim($data['pp_MerchantID']) . '&' .
+            trim($data['pp_Password']) . '&' .
+            trim($data['pp_ReturnURL']) . '&' .
+            trim($data['pp_TxnCurrency']) . '&' .
+            trim($data['pp_TxnDateTime']) . '&' .
+            trim($data['pp_TxnExpiryDateTime']) . '&' .
+            trim($data['pp_TxnRefNo']) . '&' .
+            trim($data['pp_TxnType']) . '&' .
+            // trim($data['pp_MobileNumber']) . '&' .
+            trim($data['pp_Version'] ?? '') . '&' .
+            $data['ppmpf_1'] ?? '';
+            // trim($data['ppmpf_1']);
+            
 
-        return hash('sha256', $hashString);
+        return strtoupper(
+            hash_hmac('sha256', $hashString, trim($integritySalt))
+        );
     }
+
     public function jazzcashCallback(Request $request)
     {
         \Log::info('JazzCash Callback', $request->all());
@@ -256,31 +250,9 @@ class WalletController extends Controller
         }
     }
 
-    private function verifySecureHash($data, $salt)
+   private function verifySecureHash($data, $salt)
     {
-        $hashString = $salt;
-        $hashString .= $data['pp_MerchantID'];
-        $hashString .= $data['pp_Password'];
-        $hashString .= $data['pp_TxnType'];
-        $hashString .= $data['pp_Language'];
-        $hashString .= $data['pp_MerchantID'];
-        $hashString .= $data['pp_SubMerchantID'];
-        $hashString .= $data['pp_BankID'];
-        $hashString .= $data['pp_ProductID'];
-        $hashString .= $data['pp_TxnRefNo'];
-        $hashString .= $data['pp_Amount'];
-        $hashString .= $data['pp_TxnCurrency'];
-        $hashString .= $data['pp_TxnDateTime'];
-        $hashString .= $data['pp_TxnExpiryDateTime'];
-        $hashString .= $data['pp_BillReference'];
-        $hashString .= $data['pp_Description'];
-        $hashString .= $data['pp_ReturnURL'];
-        $hashString .= $data['pp_ResponseCode'];
-        $hashString .= $data['pp_ResponseMessage'];
-        $hashString .= $data['pp_TxnRefNoPartner'];
-        $hashString .= $data['pp_TxnIdPartner'];
-
-        return hash('sha256', $hashString);
+        return $this->generateSecureHash($data, $salt);
     }
 //test tgus
     public function stripePayment(Request $request)

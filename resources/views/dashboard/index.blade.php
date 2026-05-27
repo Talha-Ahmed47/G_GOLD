@@ -73,144 +73,268 @@
 
         <!-- Tab: Main Dashboard -->
         <div id="tab-dashboard" class="tab-pane active-tab">
-            <header class="dashboard-header">
-                <div class="welcome-msg">
-                    <h1>Welcome Back, {{ auth()->user()->name }}</h1>
-                    <p>Track your portfolio and manage your assets in real-time.</p>
+            @if(auth()->user()->role === 'admin' || auth()->user()->hasRole('admin'))
+                <header class="dashboard-header">
+                    <div class="welcome-msg">
+                        <h1>Welcome Back, {{ auth()->user()->name }} (Admin)</h1>
+                        <p>Track customer holdings, view inventory status, and monitor live market rates.</p>
+                    </div>
+                </header>
+
+                <!-- Chart & Summary Grid for Admin -->
+                <div class="dashboard-grid" style="margin-bottom: 30px;">
+                    <!-- Live Precious Metals Chart -->
+                    <div class="card">
+                        <div class="card-title">
+                            <i class="fa-solid fa-chart-area"></i> Live Metals Price Chart (USD / g)
+                        </div>
+                        <div style="position: relative; height: 350px;">
+                            <canvas id="metalsChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Purchased Materials Chart -->
+                    <div class="card" style="display: flex; flex-direction: column; justify-content: center;">
+                        <div class="card-title" style="margin-bottom: 15px;">
+                            <i class="fa-solid fa-chart-pie"></i> Purchased Materials Distribution (g)
+                        </div>
+                        <div style="position: relative; height: 300px; display: flex; align-items: center; justify-content: center;">
+                            <canvas id="purchasedChart"></canvas>
+                        </div>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 15px; align-items: center;">
-                    <!-- Fulfillment Mode Toggle Segmented Control -->
-                    <div class="fulfillment-selector-group" style="display: inline-flex; background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border-color); padding: 4px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);">
-                        <button id="fulfillment-voucher-btn" onclick="setFulfillment('voucher')" style="font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; padding: 7px 15px; border-radius: 6px; border: none; background: var(--gold-light); color: #000; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); outline: none;">
-                            <i class="fa-solid fa-ticket"></i> Voucher
+
+                <!-- Admin Materials Stock / Amount -->
+                <h2 style="font-size: 22px; font-weight: 600; margin-bottom: 20px; color: var(--text-main);">
+                    <i class="fa-solid fa-boxes-stacked" style="color: var(--gold-light); margin-right: 10px;"></i> Material Amount (Admin Stock)
+                </h2>
+                <div class="portfolio-grid" style="margin-bottom: 40px;">
+                    @foreach($adminMaterials as $material)
+                        <div class="metal-card">
+                            <div class="metal-info">
+                                <div class="metal-name" style="color: {{ $material->metal === 'gold' ? 'var(--gold-light)' : ($material->metal === 'silver' ? 'var(--silver-color)' : ($material->metal === 'platinum' ? 'var(--platinum-color)' : 'var(--palladium-color)')) }};">
+                                    @if($material->metal === 'gold')
+                                        <i class="fa-solid fa-coins"></i>
+                                    @elseif($material->metal === 'silver')
+                                        <i class="fa-solid fa-circle"></i>
+                                    @elseif($material->metal === 'platinum')
+                                        <i class="fa-solid fa-gem"></i>
+                                    @else
+                                        <i class="fa-solid fa-shield-halved"></i>
+                                    @endif
+                                    {{ ucfirst($material->metal) }}
+                                </div>
+                                <div class="metal-price">
+                                    Stock: {{ number_format($material->amount, 4) }} g
+                                </div>
+                            </div>
+                            <div style="font-size: 13px; color: var(--text-muted); margin-top: 10px;">
+                                Buy price: ${{ number_format($material->buy_price, 2) }} / g
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                <!-- Customer List -->
+                <h2 style="font-size: 22px; font-weight: 600; margin-bottom: 20px; color: var(--text-main);">
+                    <i class="fa-solid fa-users" style="color: var(--gold-light); margin-right: 10px;"></i> Customer List
+                </h2>
+                <div class="card" style="padding: 25px; margin-bottom: 30px;">
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary);">
+                                    <th style="padding: 12px 8px;">Name</th>
+                                    <th style="padding: 12px 8px;">Email</th>
+                                    <th style="padding: 12px 8px;">Gold Bal (g)</th>
+                                    <th style="padding: 12px 8px;">Silver Bal (g)</th>
+                                    <th style="padding: 12px 8px;">Platinum Bal (g)</th>
+                                    <th style="padding: 12px 8px;">Palladium Bal (g)</th>
+                                    <th style="padding: 12px 8px;">Wallet (USD)</th>
+                                    <th style="padding: 12px 8px;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($customers as $customer)
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                        <td style="padding: 16px 8px; font-weight: 500; color: var(--text-primary);">{{ $customer->name }}</td>
+                                        <td style="padding: 16px 8px; color: var(--text-secondary);">{{ $customer->email }}</td>
+                                        <td style="padding: 16px 8px; color: var(--gold-light);">{{ number_format($customer->wallet->gold_balance ?? 0, 4) }}</td>
+                                        <td style="padding: 16px 8px; color: var(--silver-color);">{{ number_format($customer->wallet->silver_balance ?? 0, 4) }}</td>
+                                        <td style="padding: 16px 8px; color: var(--platinum-color);">{{ number_format($customer->wallet->platinum_balance ?? 0, 4) }}</td>
+                                        <td style="padding: 16px 8px; color: var(--palladium-color);">{{ number_format($customer->wallet->palladium_balance ?? 0, 4) }}</td>
+                                        <td style="padding: 16px 8px; color: #4A7C59; font-weight: 600;">
+                                            ${{ number_format($customer->walletDeposit->amount ?? 0, 2) }}
+                                        </td>
+                                        <td style="padding: 16px 8px;">
+                                            @if($customer->is_active)
+                                                <span style="background: rgba(74,124,89,0.15); color: #4A7C59; padding: 2px 8px; border-radius: 4px; font-size: 12px;">Active</span>
+                                            @else
+                                                <span style="background: rgba(255,77,77,0.15); color: #ff4d4d; padding: 2px 8px; border-radius: 4px; font-size: 12px;">Inactive</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" style="padding: 30px; text-align: center; color: var(--text-muted);">No customers found.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @else
+                <header class="dashboard-header">
+                    <div class="welcome-msg">
+                        <h1>Welcome Back, {{ auth()->user()->name }}</h1>
+                        <p>Track your portfolio and manage your assets in real-time.</p>
+                    </div>
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <!-- Fulfillment Mode Toggle Segmented Control -->
+                        <div class="fulfillment-selector-group" style="display: inline-flex; background: rgba(30, 41, 59, 0.6); border: 1px solid var(--border-color); padding: 4px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);">
+                            <button id="fulfillment-voucher-btn" onclick="setFulfillment('voucher')" style="font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 600; padding: 7px 15px; border-radius: 6px; border: none; background: var(--gold-light); color: #000; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); outline: none;">
+                                <i class="fa-solid fa-ticket"></i> Voucher
+                            </button>
+                            <button id="fulfillment-deliver-btn" onclick="setFulfillment('deliver')" style="font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; padding: 7px 15px; border-radius: 6px; border: none; background: transparent; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); outline: none;">
+                                <i class="fa-solid fa-truck-fast"></i> Deliver
+                            </button>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="depositFunds()">
+                            <i class="fa-solid fa-plus"></i> Add Fund
                         </button>
-                        <button id="fulfillment-deliver-btn" onclick="setFulfillment('deliver')" style="font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; padding: 7px 15px; border-radius: 6px; border: none; background: transparent; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); outline: none;">
-                            <i class="fa-solid fa-truck-fast"></i> Deliver
-                        </button>
                     </div>
+                </header>
 
-                    <button class="btn btn-primary" onclick="depositFunds()">
-                        <i class="fa-solid fa-plus"></i> Add Fund
-                    </button>
-                </div>
-            </header>
-
-            <!-- Chart & Wallet Summary Grid -->
-            <div class="dashboard-grid">
-                <!-- Live Precious Metals Chart -->
-                <div class="card">
-                    <div class="card-title">
-                        <i class="fa-solid fa-chart-area"></i> Live Metals Price Chart (USD / g)
-                    </div>
-                    <div style="position: relative; height: 350px;">
-                        <canvas id="metalsChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Fiat Wallet Summary -->
-                <div class="card" style="display: flex; flex-direction: column; justify-content: center;">
-                    <div class="card-title" style="margin-bottom: 15px;">
-                        <i class="fa-solid fa-dollar-sign"></i> Available Wallet Balance
-                    </div>
-                    <div style="font-size: 48px; font-weight: 300; margin-bottom: 20px; color: var(--gold-light); display: flex; align-items: center; gap: 15px;">
-                        <span id="fiatBalance" data-balance="{{ $fiatBalance }}">••••••</span>
-                        <button id="toggleBalanceBtn" onclick="toggleBalanceVisibility()" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 24px; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: color 0.3s ease;">
-                            <i class="fa-solid fa-eye-slash"></i>
-                        </button>
-                    </div>
-                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 30px;">
-                        Deposit fiat funds instantly using your credit card or bank transfer. Use these funds to buy gold, silver, platinum, or palladium in seconds.
-                    </p>
-                    <div class="trade-buttons">
-                        <button class="btn btn-primary" onclick="depositFunds()" style="width: 100%;">
-                            <i class="fa-solid fa-building-columns"></i> Deposit Funds
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Portfolios Grid for All Materials -->
-            <h2 style="font-size: 22px; font-weight: 600; margin-bottom: 20px; color: var(--text-main);">
-                <i class="fa-solid fa-cubes-stacked" style="color: var(--gold-light); margin-right: 10px;"></i> Precious Metals Portfolio
-            </h2>
-
-            <div class="portfolio-grid">
-                <!-- Gold Card -->
-                <div class="metal-card">
-                    <div class="metal-info">
-                        <div class="metal-name" style="color: var(--gold-light);">
-                            <i class="fa-solid fa-coins"></i> Gold
+                <!-- Chart & Wallet Summary Grid -->
+                <div class="dashboard-grid">
+                    <!-- Live Precious Metals Chart -->
+                    <div class="card">
+                        <div class="card-title">
+                            <i class="fa-solid fa-chart-area"></i> Live Metals Price Chart (USD / g)
                         </div>
-                        <div class="metal-price" id="goldLivePrice">
-                            ${{ number_format($metalPrices['gold'], 2) }} / g
+                        <div style="position: relative; height: 350px;">
+                            <canvas id="metalsChart"></canvas>
                         </div>
                     </div>
-                    <div class="metal-balance" id="goldBalance">
-                        {{ number_format($wallet->gold_balance, 4) }} g
-                    </div>
-                    <div class="trade-buttons">
-                        <button class="btn btn-primary" onclick="tradeMetal('gold', 'buy')">Buy</button>
-                        <button class="btn btn-outline" onclick="tradeMetal('gold', 'sell')">Sell</button>
+
+                    <!-- Fiat Wallet Summary -->
+                    <div class="card" style="display: flex; flex-direction: column; justify-content: center;">
+                        <div class="card-title" style="margin-bottom: 15px;">
+                            <i class="fa-solid fa-dollar-sign"></i> Available Wallet Balance
+                        </div>
+                        <div style="font-size: 48px; font-weight: 300; margin-bottom: 20px; color: var(--gold-light); display: flex; align-items: center; gap: 15px;">
+                            <span id="fiatBalance" data-balance="{{ $fiatBalance }}">••••••</span>
+                            <button id="toggleBalanceBtn" onclick="toggleBalanceVisibility()" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 24px; display: inline-flex; align-items: center; justify-content: center; outline: none; transition: color 0.3s ease;">
+                                <i class="fa-solid fa-eye-slash"></i>
+                            </button>
+                        </div>
+                        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 30px;">
+                            Deposit fiat funds instantly using your credit card or bank transfer. Use these funds to buy gold, silver, platinum, or palladium in seconds.
+                        </p>
+                        <div class="trade-buttons">
+                            <button class="btn btn-primary" onclick="depositFunds()" style="width: 100%;">
+                                <i class="fa-solid fa-building-columns"></i> Deposit Funds
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Silver Card -->
-                <div class="metal-card">
-                    <div class="metal-info">
-                        <div class="metal-name" style="color: var(--silver-color);">
-                            <i class="fa-solid fa-circle"></i> Silver
-                        </div>
-                        <div class="metal-price" id="silverLivePrice">
-                            ${{ number_format($metalPrices['silver'], 2) }} / g
-                        </div>
-                    </div>
-                    <div class="metal-balance" id="silverBalance">
-                        {{ number_format($wallet->silver_balance, 4) }} g
-                    </div>
-                    <div class="trade-buttons">
-                        <button class="btn btn-primary" onclick="tradeMetal('silver', 'buy')">Buy</button>
-                        <button class="btn btn-outline" onclick="tradeMetal('silver', 'sell')">Sell</button>
-                    </div>
-                </div>
+                <!-- Portfolios Grid for All Materials -->
+                <h2 style="font-size: 22px; font-weight: 600; margin-bottom: 20px; color: var(--text-main);">
+                    <i class="fa-solid fa-cubes-stacked" style="color: var(--gold-light); margin-right: 10px;"></i> Precious Metals Portfolio
+                </h2>
 
-                <!-- Platinum Card -->
-                <div class="metal-card">
-                    <div class="metal-info">
-                        <div class="metal-name" style="color: var(--platinum-color);">
-                            <i class="fa-solid fa-gem"></i> Platinum
+                <div class="portfolio-grid">
+                    <!-- Gold Card -->
+                    <div class="metal-card">
+                        <div class="metal-info">
+                            <div class="metal-name" style="color: var(--gold-light);">
+                                <i class="fa-solid fa-coins"></i> Gold
+                            </div>
+                            <div class="metal-price" id="goldLivePrice">
+                                ${{ number_format($metalPrices['gold'], 2) }} / g
+                            </div>
                         </div>
-                        <div class="metal-price" id="platinumLivePrice">
-                            ${{ number_format($metalPrices['platinum'], 2) }} / g
+                        <div class="metal-balance" id="goldBalance" data-qty="{{ $wallet->gold_balance }}">
+                            {{ number_format($wallet->gold_balance, 4) }} g
+                            <span class="usd-value" style="font-size: 13px; color: var(--text-muted); display: block; margin-top: 4px;">
+                                ≈ ${{ number_format($wallet->gold_balance * $metalPrices['gold'], 2) }}
+                            </span>
+                        </div>
+                        <div class="trade-buttons">
+                            <button class="btn btn-primary" onclick="tradeMetal('gold', 'buy')">Buy</button>
+                            <button class="btn btn-outline" onclick="tradeMetal('gold', 'sell')">Sell</button>
                         </div>
                     </div>
-                    <div class="metal-balance" id="platinumBalance">
-                        {{ number_format($wallet->platinum_balance, 4) }} g
-                    </div>
-                    <div class="trade-buttons">
-                        <button class="btn btn-primary" onclick="tradeMetal('platinum', 'buy')">Buy</button>
-                        <button class="btn btn-outline" onclick="tradeMetal('platinum', 'sell')">Sell</button>
-                    </div>
-                </div>
 
-                <!-- Palladium Card -->
-                <div class="metal-card">
-                    <div class="metal-info">
-                        <div class="metal-name" style="color: var(--palladium-color);">
-                            <i class="fa-solid fa-shield-halved"></i> Palladium
+                    <!-- Silver Card -->
+                    <div class="metal-card">
+                        <div class="metal-info">
+                            <div class="metal-name" style="color: var(--silver-color);">
+                                <i class="fa-solid fa-circle"></i> Silver
+                            </div>
+                            <div class="metal-price" id="silverLivePrice">
+                                ${{ number_format($metalPrices['silver'], 2) }} / g
+                            </div>
                         </div>
-                        <div class="metal-price" id="palladiumLivePrice">
-                            ${{ number_format($metalPrices['palladium'], 2) }} / g
+                        <div class="metal-balance" id="silverBalance" data-qty="{{ $wallet->silver_balance }}">
+                            {{ number_format($wallet->silver_balance, 4) }} g
+                            <span class="usd-value" style="font-size: 13px; color: var(--text-muted); display: block; margin-top: 4px;">
+                                ≈ ${{ number_format($wallet->silver_balance * $metalPrices['silver'], 2) }}
+                            </span>
+                        </div>
+                        <div class="trade-buttons">
+                            <button class="btn btn-primary" onclick="tradeMetal('silver', 'buy')">Buy</button>
+                            <button class="btn btn-outline" onclick="tradeMetal('silver', 'sell')">Sell</button>
                         </div>
                     </div>
-                    <div class="metal-balance" id="palladiumBalance">
-                        {{ number_format($wallet->palladium_balance, 4) }} g
+
+                    <!-- Platinum Card -->
+                    <div class="metal-card">
+                        <div class="metal-info">
+                            <div class="metal-name" style="color: var(--platinum-color);">
+                                <i class="fa-solid fa-gem"></i> Platinum
+                            </div>
+                            <div class="metal-price" id="platinumLivePrice">
+                                ${{ number_format($metalPrices['platinum'], 2) }} / g
+                            </div>
+                        </div>
+                        <div class="metal-balance" id="platinumBalance" data-qty="{{ $wallet->platinum_balance }}">
+                            {{ number_format($wallet->platinum_balance, 4) }} g
+                            <span class="usd-value" style="font-size: 13px; color: var(--text-muted); display: block; margin-top: 4px;">
+                                ≈ ${{ number_format($wallet->platinum_balance * $metalPrices['platinum'], 2) }}
+                            </span>
+                        </div>
+                        <div class="trade-buttons">
+                            <button class="btn btn-primary" onclick="tradeMetal('platinum', 'buy')">Buy</button>
+                            <button class="btn btn-outline" onclick="tradeMetal('platinum', 'sell')">Sell</button>
+                        </div>
                     </div>
-                    <div class="trade-buttons">
-                        <button class="btn btn-primary" onclick="tradeMetal('palladium', 'buy')">Buy</button>
-                        <button class="btn btn-outline" onclick="tradeMetal('palladium', 'sell')">Sell</button>
+
+                    <!-- Palladium Card -->
+                    <div class="metal-card">
+                        <div class="metal-info">
+                            <div class="metal-name" style="color: var(--palladium-color);">
+                                <i class="fa-solid fa-shield-halved"></i> Palladium
+                            </div>
+                            <div class="metal-price" id="palladiumLivePrice">
+                                ${{ number_format($metalPrices['palladium'], 2) }} / g
+                            </div>
+                        </div>
+                        <div class="metal-balance" id="palladiumBalance" data-qty="{{ $wallet->palladium_balance }}">
+                            {{ number_format($wallet->palladium_balance, 4) }} g
+                            <span class="usd-value" style="font-size: 13px; color: var(--text-muted); display: block; margin-top: 4px;">
+                                ≈ ${{ number_format($wallet->palladium_balance * $metalPrices['palladium'], 2) }}
+                            </span>
+                        </div>
+                        <div class="trade-buttons">
+                            <button class="btn btn-primary" onclick="tradeMetal('palladium', 'buy')">Buy</button>
+                            <button class="btn btn-outline" onclick="tradeMetal('palladium', 'sell')">Sell</button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            @endif
         </div>
 
         <!-- Tab: Vault Storage -->
@@ -706,6 +830,8 @@
 
     <!-- Custom ChartJS Configuration -->
     <script>
+        window.currentPrices = {!! json_encode($metalPrices) !!};
+
         $(document).ready(function() {
             const ctx = document.getElementById('metalsChart').getContext('2d');
 
@@ -800,6 +926,44 @@
                     }
                 }
             });
+
+            @if(auth()->user()->role === 'admin' || auth()->user()->hasRole('admin'))
+            const purchasedCtx = document.getElementById('purchasedChart').getContext('2d');
+            const purchasedHoldings = {!! json_encode($purchasedHoldings) !!};
+            new Chart(purchasedCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Gold', 'Silver', 'Platinum', 'Palladium'],
+                    datasets: [{
+                        data: [
+                            parseFloat(purchasedHoldings.gold || 0),
+                            parseFloat(purchasedHoldings.silver || 0),
+                            parseFloat(purchasedHoldings.platinum || 0),
+                            parseFloat(purchasedHoldings.palladium || 0)
+                        ],
+                        backgroundColor: ['#f5c469', '#a6a6a6', '#e5e5e5', '#8c8c8c'],
+                        borderColor: '#0f172a',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#9ca3af',
+                                font: {
+                                    family: "'Outfit', sans-serif",
+                                    size: 12
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            @endif
         });
 
         // ─── SweetAlert2 Helpers (themed for Aurum Gold dark design) ───
@@ -902,7 +1066,20 @@
             $('#tradeModalDesc').text(`Enter the quantity of ${metal} you wish to ${action}.`);
             $('#tradeSubmitBtn').text(`Confirm ${capitalizedAction}`);
 
+            // Set rate display
+            const rate = window.currentPrices ? (window.currentPrices[metal] || 0) : 0;
+            $('#tradeRateDisplay').text(`$${parseFloat(rate).toFixed(2)} / g`);
+            $('#tradeTotalDisplay').text('$0.00');
+
             openModal('trade');
+        }
+
+        function calculateTradeTotal() {
+            const metal = $('#tradeMetalType').val();
+            const qty = parseFloat($('#tradeQuantity').val()) || 0;
+            const rate = window.currentPrices ? (window.currentPrices[metal] || 0) : 0;
+            const total = qty * rate;
+            $('#tradeTotalDisplay').text(`$${total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`);
         }
 
         let currentFulfillmentMode = 'voucher';
@@ -967,10 +1144,18 @@
             if (!balanceHidden) {
                 $('#fiatBalance').text(`$${parseFloat(data.fiat_balance).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`);
             }
-            $('#goldBalance').text(`${parseFloat(data.gold_balance).toFixed(4)} g`);
-            $('#silverBalance').text(`${parseFloat(data.silver_balance).toFixed(4)} g`);
-            $('#platinumBalance').text(`${parseFloat(data.platinum_balance).toFixed(4)} g`);
-            $('#palladiumBalance').text(`${parseFloat(data.palladium_balance).toFixed(4)} g`);
+            const metals = ['gold', 'silver', 'platinum', 'palladium'];
+            metals.forEach(metal => {
+                const qty = parseFloat(data[metal + '_balance']) || 0;
+                const rate = window.currentPrices ? (window.currentPrices[metal] || 0) : 0;
+                const usdValue = qty * rate;
+                $(`#${metal}Balance`).attr('data-qty', qty).html(`
+                    ${qty.toFixed(4)} g
+                    <span class="usd-value" style="font-size: 13px; color: var(--text-muted); display: block; margin-top: 4px;">
+                        ≈ $${usdValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </span>
+                `);
+            });
         }
 
         // Vault Storage Handlers
@@ -1154,10 +1339,26 @@
                         const prices = response.price;
 
                         // Update units prices on metal portfolio cards
+                        window.currentPrices = prices;
+                        if ($('#tradeModalOverlay').hasClass('active')) {
+                            const metal = $('#tradeMetalType').val();
+                            const rate = window.currentPrices[metal] || 0;
+                            $('#tradeRateDisplay').text(`$${parseFloat(rate).toFixed(2)} / g`);
+                            calculateTradeTotal();
+                        }
                         $('#goldLivePrice').text(`$${parseFloat(prices.gold).toFixed(2)} / g`);
                         $('#silverLivePrice').text(`$${parseFloat(prices.silver).toFixed(2)} / g`);
                         $('#platinumLivePrice').text(`$${parseFloat(prices.platinum).toFixed(2)} / g`);
                         $('#palladiumLivePrice').text(`$${parseFloat(prices.palladium).toFixed(2)} / g`);
+
+                        const metals = ['gold', 'silver', 'platinum', 'palladium'];
+                        metals.forEach(metal => {
+                            const balanceEl = $(`#${metal}Balance`);
+                            const qty = parseFloat(balanceEl.attr('data-qty')) || 0;
+                            const rate = parseFloat(prices[metal]) || 0;
+                            const usdValue = qty * rate;
+                            balanceEl.find('.usd-value').text(`≈ $${usdValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`);
+                        });
 
                         // Append time label and metal prices to Chart
                         const now = new Date();
@@ -1420,7 +1621,17 @@
                     <div class="form-group">
                         <label for="tradeQuantity" style="margin-bottom: 8px; display: block; font-size: 14px; font-weight: 500;">Quantity (grams)</label>
                         <div class="form-input-wrapper">
-                            <input type="number" id="tradeQuantity" step="0.0001" min="0.0001" class="form-control" style="padding-left: 16px;" placeholder="0.5000" required>
+                            <input type="number" id="tradeQuantity" step="0.0001" min="0.0001" class="form-control" style="padding-left: 16px;" placeholder="0.5000" oninput="calculateTradeTotal()" required>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 15px; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary);">
+                            <span>Rate:</span>
+                            <span id="tradeRateDisplay" style="color: var(--text-primary); font-weight: 600;">$0.00 / g</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); margin-top: 8px;">
+                            <span>Estimated Total:</span>
+                            <span id="tradeTotalDisplay" style="color: var(--gold-light); font-weight: 700; font-size: 15px;">$0.00</span>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -1557,73 +1768,58 @@
     <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&libraries=places"></script>
 <script>
     function initAutocomplete() {
-
         const input = document.getElementById('inlineSettingsAddress');
+        const mapInput = document.getElementById('mapDestinationInput');
 
         if (input) {
-
             const autocomplete = new google.maps.places.Autocomplete(input);
-
             autocomplete.addListener('place_changed', function () {
-
                 const place = autocomplete.getPlace();
-
                 console.log(place);
-
-                // Check geometry exists
                 if (!place.geometry) {
                     console.log("No details available");
                     return;
                 }
-
-                // Latitude & Longitude
                 const latitude = place.geometry.location.lat();
                 const longitude = place.geometry.location.lng();
-
                 document.getElementById('latitude').value = latitude;
                 document.getElementById('longitude').value = longitude;
 
-                // Address Components
                 let city = '';
                 let state = '';
                 let postcode = '';
                 let country = '';
 
                 place.address_components.forEach((component) => {
-
                     const types = component.types;
-
                     if (types.includes('locality')) {
                         city = component.long_name;
                     }
-
                     if (types.includes('administrative_area_level_1')) {
                         state = component.long_name;
                     }
-
                     if (types.includes('postal_code')) {
                         postcode = component.long_name;
                     }
-
                     if (types.includes('country')) {
                         country = component.long_name;
                     }
                 });
 
-                // Assign values
                 document.getElementById('city').value = city;
                 document.getElementById('state').value = state;
                 document.getElementById('zip_code').value = postcode;
                 document.getElementById('country').value = country;
+            });
+        }
 
-                console.log({
-                    latitude,
-                    longitude,
-                    city,
-                    state,
-                    postcode,
-                    country
-                });
+        if (mapInput) {
+            const autocompleteMap = new google.maps.places.Autocomplete(mapInput);
+            autocompleteMap.addListener('place_changed', function () {
+                const place = autocompleteMap.getPlace();
+                if (place.geometry) {
+                    calculateTransitRoute();
+                }
             });
         }
     }

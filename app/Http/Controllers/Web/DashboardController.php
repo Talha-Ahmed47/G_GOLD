@@ -2,22 +2,22 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Services\WalletService;
-use App\Services\TradingService;
 use Illuminate\Support\Facades\Auth;
+
+use App\Http\Controllers\Controller;
+use App\Services\{AdminMaterialService, GoldPriceService, TradingService, WalletService};
 
 class DashboardController extends Controller
 {
     protected WalletService $walletService;
     protected TradingService $tradingService;
-    protected \App\Services\GoldPriceService $goldPriceService;
+    protected GoldPriceService $goldPriceService;
 
     public function __construct(
         WalletService $walletService,
         TradingService $tradingService,
-        \App\Services\GoldPriceService $goldPriceService
+        GoldPriceService $goldPriceService
     ) {
         $this->walletService = $walletService;
         $this->tradingService = $tradingService;
@@ -26,6 +26,7 @@ class DashboardController extends Controller
 
     public function index()
     {
+
         $wallet = Auth::user()->wallet()->firstOrCreate([]);
         $walletDeposit = Auth::user()->walletDeposit()->firstOrCreate([], ['amount' => 0]);
         $fiatBalance = $walletDeposit ? $walletDeposit->amount : 0;
@@ -59,10 +60,24 @@ class DashboardController extends Controller
 
         // Fetch admin inventory if current user is admin
         $adminInventory = null;
-        if (Auth::user()->role === 'admin') {
+        $customers = collect();
+        $purchasedHoldings = [];
+        $adminMaterials = collect();
+        if (Auth::user()->hasRole('admin')) {
             $adminUser = \App\Models\User::where('role', 'admin')->first();
+        
             $adminInventory = $adminUser ? $adminUser->wallet : null;
+            $customers = \App\Models\User::where('role', 'user')->with(['wallet', 'walletDeposit'])->get();
+            $purchasedHoldings = [
+                'gold' => \App\Models\Wallet::where('user_id', '!=', Auth::id())->sum('gold_balance'),
+                'silver' => \App\Models\Wallet::where('user_id', '!=', Auth::id())->sum('silver_balance'),
+                'platinum' => \App\Models\Wallet::where('user_id', '!=', Auth::id())->sum('platinum_balance'),
+                'palladium' => \App\Models\Wallet::where('user_id', '!=', Auth::id())->sum('palladium_balance'),
+            ];
+            $adminMaterials = \App\Models\AdminMaterial::all();
+            // dd($customers);    
         }
+       
         $totalWeightG = $wallet->gold_balance + $wallet->silver_balance + $wallet->platinum_balance + $wallet->palladium_balance;
         $totalWeightKg = $totalWeightG / 1000;
         $extraWeightKg = max(0, $totalWeightKg - $storageLimitKg);
@@ -81,7 +96,10 @@ class DashboardController extends Controller
             'totalWeightKg',
             'extraWeightKg',
             'monthlyExtraFee',
-            'userAddress'
+            'userAddress',
+            'customers',
+            'purchasedHoldings',
+            'adminMaterials'
         ));
     }
 
@@ -91,14 +109,15 @@ class DashboardController extends Controller
         
         $this->walletService->depositFiat(Auth::id(), $request->amount);
         
-        $wallet = Auth::user()->wallet->fresh();
+        $wallet        = Auth::user()->wallet->fresh();
         $walletDeposit = Auth::user()->walletDeposit->fresh();
+
         return response()->json([
-            'success' => true,
-            'fiat_balance' => $walletDeposit ? $walletDeposit->amount : 0,
-            'gold_balance' => $wallet->gold_balance,
-            'silver_balance' => $wallet->silver_balance,
-            'platinum_balance' => $wallet->platinum_balance,
+            'success'           => true,
+            'fiat_balance'      => $walletDeposit ? $walletDeposit->amount : 0,
+            'gold_balance'      => $wallet->gold_balance,
+            'silver_balance'    => $wallet->silver_balance,
+            'platinum_balance'  => $wallet->platinum_balance,
             'palladium_balance' => $wallet->palladium_balance
         ]);
     }
@@ -107,21 +126,22 @@ class DashboardController extends Controller
     {
         $request->validate([
             'quantity' => 'required|numeric|min:0.0001',
-            'metal' => 'required|string|in:gold,silver,platinum,palladium'
+            'metal'    => 'required|string|in:gold,silver,platinum,palladium'
         ]);
         
         $metal = strtolower($request->metal);
         $this->tradingService->buyMetal(Auth::id(), $metal, $request->quantity);
         
-        $wallet = Auth::user()->wallet->fresh();
+        $wallet        = Auth::user()->wallet->fresh();
         $walletDeposit = Auth::user()->walletDeposit->fresh();
+
         return response()->json([
-            'success' => true,
-            'message' => 'Successfully bought ' . $request->quantity . 'g of ' . ucfirst($metal) . '!',
-            'fiat_balance' => $walletDeposit ? $walletDeposit->amount : 0,
-            'gold_balance' => $wallet->gold_balance,
-            'silver_balance' => $wallet->silver_balance,
-            'platinum_balance' => $wallet->platinum_balance,
+            'success'           => true,
+            'message'           => 'Successfully bought ' . $request->quantity . 'g of ' . ucfirst($metal) . '!',
+            'fiat_balance'      => $walletDeposit ? $walletDeposit->amount : 0,
+            'gold_balance'      => $wallet->gold_balance,
+            'silver_balance'    => $wallet->silver_balance,
+            'platinum_balance'  => $wallet->platinum_balance,
             'palladium_balance' => $wallet->palladium_balance
         ]);
     }
