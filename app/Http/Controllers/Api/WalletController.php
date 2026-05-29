@@ -52,13 +52,13 @@ class WalletController extends Controller
         try {
             $amount = $request->amount * 100;
 
-            $pp_MerchantID = env('JAZZCASH_MERCHANT_ID');
-            $pp_Password = env('JAZZCASH_PASSWORD');
+            $pp_MerchantID  = env('JAZZCASH_MERCHANT_ID');
+            $pp_Password    = env('JAZZCASH_PASSWORD');
             $IntegeritySalt ="08z3t4096c";
-
-            $pp_TxnRefNo = 'T' . time() . rand(1000, 9999);
-            $dateTime = now("Asia/Karachi")->format('YmdHis');
+            $pp_TxnRefNo    = 'T' . time() . rand(1000, 9999);
+            $dateTime       = now("Asia/Karachi")->format('YmdHis');
             $expiryDateTime = now("Asia/Karachi")->addMinutes(30)->format('YmdHis');
+
             // $data = [
             //     "pp_Version" => "1.1",
             //     "pp_TxnType" => "MWALLET",
@@ -81,23 +81,21 @@ class WalletController extends Controller
             //     "ppmpf_1" => "03222852628", // Optional - can be used to pass additional info
             // ];
           $data = [
-            "pp_Version" => "1.1",
-            "pp_TxnType" => "MWALLET", 
-            "pp_Language" => "EN",
-
-            "pp_MerchantID" => $pp_MerchantID,
-            "pp_Password" => $pp_Password,
-            "pp_TxnRefNo" => $pp_TxnRefNo,
-            "pp_Amount" => (int)$amount,
-            "pp_TxnCurrency" => "PKR",
-            "pp_TxnDateTime" => $dateTime,
+            "pp_Version"           => "1.1",
+            "pp_TxnType"           => "MWALLET", 
+            "pp_Language"          => "EN",
+            "pp_MerchantID"        => $pp_MerchantID,
+            "pp_Password"          => $pp_Password,
+            "pp_TxnRefNo"          => $pp_TxnRefNo,
+            "pp_Amount"            => (int)$amount,
+            "pp_TxnCurrency"       => "PKR",
+            "pp_TxnDateTime"       => $dateTime,
             "pp_TxnExpiryDateTime" => $expiryDateTime,
-
-            "pp_BillReference" => "billRef",
-            "pp_Description" => "Wallet Deposit",
-            "pp_ReturnURL" => url('/wallet/jazzcash/callback'),
+            "pp_BillReference"     => "billRef",
+            "pp_Description"       => "Wallet Deposit",
+            "pp_ReturnURL"         => url('/wallet/jazzcash/callback'),
+            "ppmpf_1"              => "03321234567", // Optional - can be used to pass additional info
             // "pp_MobileNumber" => "92323456789", // Use actual user mobile number here
-            "ppmpf_1" => "03321234567", // Optional - can be used to pass additional info
         ];
 
             $data['pp_SecureHash'] = $this->generateSecureHash($data, $IntegeritySalt);
@@ -106,7 +104,7 @@ class WalletController extends Controller
             session([
                 'jazzcash_txn_ref' => $pp_TxnRefNo,
                 'jazzcash_user_id' => auth()->id(),
-                'jazzcash_amount' => $amount,
+                'jazzcash_amount'  => $amount,
             ]);
 
             return view('jazzcash.redirect', compact('data'));
@@ -114,8 +112,8 @@ class WalletController extends Controller
         } catch (\Exception $e) {
             \Log::error('JazzCash Payment Error', [
                 'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
+                'file'  => $e->getFile(),
+                'line'  => $e->getLine(),
             ]);
             dd($e->getMessage());
              // return redirect('/wallet')->with('error', 'Error initiating payment');
@@ -164,25 +162,25 @@ class WalletController extends Controller
 
             // Build callback data for hash verification
             $callbackData = [
-                "pp_MerchantID" => $request->pp_MerchantID,
-                "pp_Password" => env('JAZZCASH_PASSWORD'),
-                "pp_TxnType" => $request->pp_TxnType,
-                "pp_Language" => $request->pp_Language,
-                "pp_SubMerchantID" => $request->pp_SubMerchantId ?? "",
-                "pp_BankID" => $request->pp_BankID ?? "",
-                "pp_ProductID" => $request->pp_ProductID ?? "",
-                "pp_TxnRefNo" => $request->pp_TxnRefNo,
-                "pp_Amount" => $request->pp_Amount,
-                "pp_TxnCurrency" => $request->pp_TxnCurrency,
-                "pp_TxnDateTime" => $request->pp_TxnDateTime,
+                "pp_MerchantID"        => $request->pp_MerchantID,
+                "pp_Password"          => env('JAZZCASH_PASSWORD'),
+                "pp_TxnType"           => $request->pp_TxnType,
+                "pp_Language"          => $request->pp_Language,
+                "pp_SubMerchantID"     => $request->pp_SubMerchantId ?? "",
+                "pp_BankID"            => $request->pp_BankID ?? "",
+                "pp_ProductID"         => $request->pp_ProductID ?? "",
+                "pp_TxnRefNo"          => $request->pp_TxnRefNo,
+                "pp_Amount"            => $request->pp_Amount,
+                "pp_TxnCurrency"       => $request->pp_TxnCurrency,
+                "pp_TxnDateTime"       => $request->pp_TxnDateTime,
                 "pp_TxnExpiryDateTime" => $request->pp_TxnExpiryDateTime,
-                "pp_BillReference" => $request->pp_BillReference,
-                "pp_Description" => $request->pp_Description,
-                "pp_ReturnURL" => $request->pp_ReturnURL,
-                "pp_ResponseCode" => $request->pp_ResponseCode,
-                "pp_ResponseMessage" => $request->pp_ResponseMessage,
-                "pp_TxnRefNoPartner" => $request->pp_TxnRefNoPartner ?? "",
-                "pp_TxnIdPartner" => $request->pp_TxnIdPartner ?? "",
+                "pp_BillReference"     => $request->pp_BillReference,
+                "pp_Description"       => $request->pp_Description,
+                "pp_ReturnURL"         => $request->pp_ReturnURL,
+                "pp_ResponseCode"      => $request->pp_ResponseCode,
+                "pp_ResponseMessage"   => $request->pp_ResponseMessage,
+                "pp_TxnRefNoPartner"   => $request->pp_TxnRefNoPartner ?? "",
+                "pp_TxnIdPartner"      => $request->pp_TxnIdPartner ?? "",
             ];
 
             // Verify hash
@@ -224,17 +222,17 @@ class WalletController extends Controller
 
             // FAILED
             WalletDeposit::create([
-                'user_id' => $user->id,
-                'amount' => $request->pp_Amount / 100,
-                'transaction_ref' => $request->pp_TxnRefNo,
-                'response_code' => $request->pp_ResponseCode,
+                'user_id'          => $user->id,
+                'amount'           => $request->pp_Amount / 100,
+                'transaction_ref'  => $request->pp_TxnRefNo,
+                'response_code'    => $request->pp_ResponseCode,
                 'response_message' => $request->pp_ResponseMessage,
-                'status' => 'failed',
-                'raw_response' => $request->all(),
+                'status'           => 'failed',
+                'raw_response'     => $request->all(),
             ]);
 
             \Log::warning('Payment Failed', [
-                'code' => $request->pp_ResponseCode,
+                'code'    => $request->pp_ResponseCode,
                 'message' => $request->pp_ResponseMessage,
             ]);
 
@@ -243,8 +241,8 @@ class WalletController extends Controller
         } catch (\Exception $e) {
             \Log::error('Callback Error', [
                 'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
+                'file'  => $e->getFile(),
+                'line'  => $e->getLine(),
             ]);
             return redirect('/wallet')->with('error', 'Error processing payment');
         }
@@ -269,17 +267,17 @@ class WalletController extends Controller
                 'payment_method_types' => ['card'],
                 'line_items' => [[
                     'price_data' => [
-                        'currency' => 'usd',
-                        'unit_amount' => $amount * 100,
+                        'currency'     => 'usd',
+                        'unit_amount'  => $amount * 100,
                         'product_data' => [
-                            'name' => 'Wallet Deposit',
+                            'name'  => 'Wallet Deposit',
                         ],
                     ],
                     'quantity' => 1,
                 ]],
-                'mode' => 'payment',
+                'mode'        => 'payment',
                 'success_url' => route('stripe.success') . '?session_id={CHECKOUT_SESSION_ID}',
-                'cancel_url' => route('stripe.cancel'),
+                'cancel_url'  => route('stripe.cancel'),
                 'metadata' => [
                     'user_id' => auth()->id()
                 ]
@@ -315,12 +313,13 @@ class WalletController extends Controller
             ]);
 
             $walletDeposit = WalletDeposit::firstOrNew(['user_id' => $user->id]);
-            $walletDeposit->amount = ($walletDeposit->amount ?? 0) + $amount;
-            $walletDeposit->transaction_ref = $session->payment_intent;
-            $walletDeposit->response_code = 'success';
+            
+            $walletDeposit->amount           = ($walletDeposit->amount ?? 0) + $amount;
+            $walletDeposit->transaction_ref  = $session->payment_intent;
+            $walletDeposit->response_code    = 'success';
             $walletDeposit->response_message = 'Stripe deposit';
-            $walletDeposit->status = 'success';
-            $walletDeposit->raw_response = $session->toArray();
+            $walletDeposit->status           = 'success';
+            $walletDeposit->raw_response     = $session->toArray();
             $walletDeposit->save();
 
             return redirect('/dashboard')->with('success', "\${$amount} added to your wallet via Stripe!");

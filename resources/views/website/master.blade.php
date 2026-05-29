@@ -25,16 +25,16 @@
                 <li><a href="/#contact">Contact</a></li>
             </ul>
             <div style="display: flex; align-items: center;">
-{{--                <a href="/dashboard" class="btn btn-outline" style="margin-right: 5px;">Sell Gold</a>--}}
-{{--                <a href="/dashboard" class="btn btn-primary" style="margin-right: 5px;">Buy Gold</a>--}}
+{{--                <a href="{{route('dashboard')}}" class="btn btn-outline" style="margin-right: 5px;">Sell Gold</a>--}}
+{{--                <a href="{{route('dashboard')}}" class="btn btn-primary" style="margin-right: 5px;">Buy Gold</a>--}}
                 <div class="nav-cta">
                     @guest
-                        <a href="/login" class="btn btn-outline" style="border-color: transparent;">Login</a>
-                        <a href="/register" class="btn btn-primary">Sign Up</a>
+                        <a href="{{ route('login') }}" class="btn btn-outline" style="border-color: transparent;">Login</a>
+                        <a href="{{ route('register') }}" class="btn btn-primary">Sign Up</a>
                     @endguest
                     @auth
-                        <a href="/dashboard" class="btn btn-primary">Dashboard</a>
-                        <a href="/logout" class="btn btn-outline" style="border-color: transparent; margin-left: 10px;">Logout</a>
+                        <a href="{{route('dashboard')}}" class="btn btn-primary">Dashboard</a>
+                        <a href="{{ route('logout')}}" class="btn btn-outline" style="border-color: transparent; margin-left: 10px;">Logout</a>
                     @endauth
                 </div>
             </div>
