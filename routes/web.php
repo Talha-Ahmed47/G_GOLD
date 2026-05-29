@@ -1,15 +1,11 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Web\DashboardController;
-use App\Http\Controllers\Web\AdminMaterialController;
+
+use App\Http\Controllers\Web\{AdminMaterialController, AuthController, DashboardController, HomeController};
 use App\Services\GoldPriceService;
-use App\Http\Controllers\Web\AuthController;
 
-
-use App\Http\Controllers\Web\HomeController;
-
-Route::get('/', [HomeController::class, 'index']);
+Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::post('/contact', [HomeController::class, 'submitContact'])->name('contact.submit');
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');

@@ -24,7 +24,7 @@
 
     <!-- Sidebar -->
     <aside class="sidebar">
-        <a href="/" class="sidebar-brand">
+        <a href="{{ route('home' }}" class="sidebar-brand">
             Aurum <span>Gold</span>
         </a>
         <ul class="sidebar-menu">
