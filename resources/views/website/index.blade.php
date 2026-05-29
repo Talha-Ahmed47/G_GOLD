@@ -188,18 +188,29 @@
         </div>
     </section>
 
-@php
+    @php
     function calculatePrice($product, $metalPrices) {
         $base = $metalPrices[$product->metal_type] ?? 0;
         $cost = $base * $product->weight_oz;
         return $cost * (1 + ($product->premium_percentage / 100));
     }
 
-    $goldCoins = $products->filter(fn($p) => $p->metal_type === 'gold' && !str_contains($p->name, 'Bar'));
-    $goldBars = $products->filter(fn($p) => $p->metal_type === 'gold' && str_contains($p->name, 'Bar'));
-    $silverProducts = $products->filter(fn($p) => $p->metal_type === 'silver');
-    $platinumProducts = $products->filter(fn($p) => $p->metal_type === 'platinum');
-@endphp
+    $goldCoins = $products->filter(function($p) {
+        return $p->metal_type === 'gold' && strpos($p->name, 'Bar') === false;
+    });
+
+    $goldBars = $products->filter(function($p) {
+        return $p->metal_type === 'gold' && strpos($p->name, 'Bar') !== false;
+    });
+
+    $silverProducts = $products->filter(function($p) {
+        return $p->metal_type === 'silver';
+    });
+
+    $platinumProducts = $products->filter(function($p) {
+        return $p->metal_type === 'platinum';
+    });
+    @endphp
 
     <!-- Products Section -->
     <section class="products" id="products">
@@ -500,14 +511,16 @@
                             <label class="form-label">Message</label>
                             <textarea name="message" class="form-textarea" placeholder="Tell us about your investment goals or questions..." required>{{ old('message') }}</textarea>
                         </div>
+                          <div class="g-recaptcha" data-sitekey="{{ env('RECAPTCHA_SITE_KEY') }}"></div>
                         <button type="submit" class="btn btn-primary form-submit">Send Message</button>
                     </form>
                 </div>
             </div>
         </div>
     </section>
-
-    <script>
+@endsection
+@push('js')
+ <script>
         $(document).ready(function() {
             function updatePrices() {
                 $.ajax({
@@ -563,5 +576,27 @@
             updatePrices();
             setInterval(updatePrices, 10000);
         });
+
+
+        $(document).on('click', '.tab-btn', function (e) {
+    e.preventDefault();
+
+    let tab = $(this).data('tab');
+
+    $('.tab-btn').removeClass('active');
+    $(this).addClass('active');
+
+    $('.products-tab-content').removeClass('active');
+    $('#tab-' + tab).addClass('active');
+});
+document.querySelectorAll('a[href*="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const target = document.querySelector(a.hash);
+    if (target) {
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+});
     </script>
-@endsection
+@endpush

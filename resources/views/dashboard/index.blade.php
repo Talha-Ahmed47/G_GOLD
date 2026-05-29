@@ -24,7 +24,7 @@
 
     <!-- Sidebar -->
     <aside class="sidebar">
-        <a href="{{ route('home' }}" class="sidebar-brand">
+        <a href="{{ route('home') }}" class="sidebar-brand">
             Aurum <span>Gold</span>
         </a>
         <ul class="sidebar-menu">
@@ -61,7 +61,7 @@
                 </li>
             @endif
             <li style="margin-top: auto;">
-                <a href="/logout" class="sidebar-link sidebar-logout">
+                <a href="{{ route('logout')}}" class="sidebar-link sidebar-logout">
                     <i class="fa-solid fa-right-from-bracket" style="color: #ff4d4d;"></i> <span style="color: #ff4d4d;">Logout</span>
                 </a>
             </li>
@@ -1555,53 +1555,57 @@
                 <p>Select payment method to add balance.</p>
             </div>
 
-            <div class="modal-body">
+        <div class="modal-body">
 
-                <div class="form-group">
+            <div class="form-group">
+                <label style="margin-bottom: 8px; display:block;">
+                    Amount (USD)
+                </label>
 
-                    <label style="margin-bottom: 8px; display:block;">
-                        Amount (USD)
-                    </label>
+                <div class="form-input-wrapper">
+                    <span>$</span>
 
-                    <div class="form-input-wrapper">
-                        <span>$</span>
-
-                        <input
-                            type="number"
-                            id="depositAmount"
-                            step="0.01"
-                            min="1"
-                            class="form-control"
-                            placeholder="100.00"
-                        >
-                    </div>
+                    <input
+                        type="number"
+                        id="depositAmount"
+                        class="form-control"
+                        placeholder="Enter amount"
+                        min="1"
+                        required
+                    >
                 </div>
+            </div>
 
-                <div class="modal-footer"
-                     style="display:flex; gap:10px; flex-direction:column;">
+  
+            <div class="modal-footer"
+                style="display:flex; gap:10px; flex-direction:column;">
 
-                    <!-- STRIPE -->
-                    <button
-                        type="button"
-                        onclick="payWithStripe()"
-                        class="btn btn-primary"
-                        style="width:100%;">
+                <!-- STRIPE FORM -->
+                <form method="GET"
+                    action="{{ route('stripe.payment') }}"
+                    onsubmit="setAmount(this)">
 
+                    <input type="hidden" name="amount">
+
+                    <button type="submit" class="btn btn-primary" style="width:100%;">
                         <i class="fa-brands fa-stripe"></i>
                         Pay with Stripe
                     </button>
+                </form>
 
-                    <!-- JAZZCASH -->
-                    <button
-                        type="button"
-                        onclick="payWithJazzCash()"
-                        class="btn btn-success"
-                        style="width:100%;">
+                <!-- JAZZCASH FORM -->
+                <form method="GET"
+                    action="{{ route('jazzcash.payment') }}"
+                    onsubmit="setAmount(this)">
 
+                    <input type="hidden" name="amount">
+
+                    <button type="submit" class="btn btn-success" style="width:100%;">
                         JazzCash
                     </button>
+                </form>
 
-                </div>
+            </div>
             </div>
         </div>
     </div>
@@ -1766,6 +1770,7 @@
 
     <!-- Load Google Maps API dynamically with place libraries -->
     <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&libraries=places"></script>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <script>
     function initAutocomplete() {
         const input = document.getElementById('inlineSettingsAddress');
@@ -1824,6 +1829,18 @@
         }
     }
 
+    function setAmount(form) {
+    const amount = document.getElementById('depositAmount').value;
+
+    if (!amount || amount <= 0) {
+        alert('Please enter a valid amount');
+        event.preventDefault();
+        return false;
+    }
+
+    form.querySelector('input[name="amount"]').value = amount;
+}
+
     function payWithStripe() {
         const amount = $('#depositAmount').val();
 
@@ -1834,8 +1851,9 @@
 
         const form = document.createElement('form');
         form.method = 'GET';
-        form.action = '/wallet/stripe/payment';
-
+        // form.action = '/wallet/stripe/payment';
+        form.action = "{{ url('/wallet/stripe/payment') }}";
+        
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = 'amount';
@@ -1868,6 +1886,7 @@
         document.body.appendChild(form);
         form.submit();
     }
+
 </script>
 </body>
 </html>

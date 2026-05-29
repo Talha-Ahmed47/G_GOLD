@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
-use App\Models\Wallet;
+use Illuminate\Support\Facades\{Auth, Hash};
+use Laravel\Socialite\Socialite;
+
+use App\Models\{User, Wallet};
+use App\Http\Controllers\Controller;
 use App\Enums\Role;
 
 class AuthController extends Controller
@@ -68,4 +69,7 @@ class AuthController extends Controller
             'user' => $user
         ]);
     }
+
+
+    
 }

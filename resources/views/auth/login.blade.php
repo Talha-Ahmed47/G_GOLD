@@ -9,9 +9,9 @@
                 <p style="color: var(--text-muted);">Login to your Aurum Gold account</p>
             </div>
 
-            <form method="POST" action="/login">
+            <form method="POST" action="{{ route('login') }}">
                 @csrf
-
+              
                 @if($errors->any())
                     <div style="color: #ff4d4d; margin-bottom: 15px; text-align: center; font-size: 14px;">
                         {{ $errors->first() }}
@@ -34,7 +34,13 @@
                     Don't have an account? <a href="/register" style="color: var(--gold-light);">Sign Up</a>
                 </div>
             </form>
+            <a href="{{ url('/auth/google') }}" class="btn btn-danger" style="width:100%; margin-top:10px;">
+                Login with Google
+            </a>
         </div>
     </div>
 </section>
 @endsection
+@push('js')
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+@endpush

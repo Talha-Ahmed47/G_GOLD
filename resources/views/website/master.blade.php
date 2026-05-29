@@ -16,13 +16,13 @@
 <nav class="nav" id="navbar">
     <div class="container">
         <div class="nav-inner">
-            <a href="/" class="logo">Aurum <span>Gold</span></a>
+            <a href="{{ url('/')}}" class="logo">Aurum <span>Gold</span></a>
             <ul class="nav-links">
-                <li><a href="/#services">Services</a></li>
-                <li><a href="/#why-gold">Why Gold</a></li>
-                <li><a href="/#products">Products</a></li>
-                <li><a href="/#testimonials">Reviews</a></li>
-                <li><a href="/#contact">Contact</a></li>
+      <a href="{{ url('/') }}#services">Services</a>
+<a href="{{ url('/') }}#why-gold">Why Gold</a>
+<a href="{{ url('/') }}#products">Products</a>
+<a href="{{ url('/') }}#testimonials">Reviews</a>
+<a href="{{ url('/') }}#contact">Contact</a>
             </ul>
             <div style="display: flex; align-items: center;">
 {{--                <a href="{{route('dashboard')}}" class="btn btn-outline" style="margin-right: 5px;">Sell Gold</a>--}}
@@ -152,6 +152,7 @@
 </footer>
 
 <script src="{{ asset("website/script.js") }}"></script>
+@stack('js')
 
 </body>
 </html>

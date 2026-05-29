@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Web\{AdminMaterialController, AuthController, DashboardController, HomeController};
+use App\Http\Controllers\Api\WalletController;
 use App\Services\GoldPriceService;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -28,12 +29,16 @@ Route::get('/debug-jazz', function() {
     return view('jazzcash.redirect', compact('data'));
 });
 
-Route::get('/wallet/jazzcash/payment', [\App\Http\Controllers\Api\WalletController::class, 'jazzcashPayment']);
-Route::post('/wallet/jazzcash/callback', [\App\Http\Controllers\Api\WalletController::class, 'jazzcashCallback']);
 
-Route::get('/wallet/stripe/payment', [\App\Http\Controllers\Api\WalletController::class, 'stripePayment'])->name('stripe.payment');
-Route::get('/wallet/stripe/success', [\App\Http\Controllers\Api\WalletController::class, 'stripeSuccess'])->name('stripe.success');
-Route::get('/wallet/stripe/cancel', [\App\Http\Controllers\Api\WalletController::class, 'stripeCancel'])->name('stripe.cancel');
+Route::get('/auth/google', [AuthController::class, 'redirectGoogle']);
+Route::get('/auth/google/callback', [AuthController::class, 'handleGoogle']);
+
+Route::get('/wallet/jazzcash/payment', [WalletController::class, 'jazzcashPayment'])->name('jazzcash.payment');
+Route::post('/wallet/jazzcash/callback', [WalletController::class, 'jazzcashCallback']);
+
+Route::get('/wallet/stripe/payment', [WalletController::class, 'stripePayment'])->name('stripe.payment');
+Route::get('/wallet/stripe/success', [WalletController::class, 'stripeSuccess'])->name('stripe.success');
+Route::get('/wallet/stripe/cancel', [WalletController::class, 'stripeCancel'])->name('stripe.cancel');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware('auth')->name('dashboard');
 
